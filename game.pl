@@ -59,7 +59,7 @@ bone(3, 5).
 bone(4, 5).
 bone(5, 5).
 
-bone(blank, 6).
+bone(0, 6).
 bone(1, 6).
 bone(2, 6).
 bone(3, 6).
@@ -204,7 +204,7 @@ keep_get_useless_user_input:-
     (
         (UselessChar = 10, !)
         ;
-        (drop_rest_of_line)
+        (keep_get_useless_user_input)
     ).
 
 print_instructions:-
