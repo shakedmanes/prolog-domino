@@ -8,6 +8,12 @@
  */
 
 :- dynamic(curr_game_state/1).
+:- dynamic(game_board/1).
+:- dynamic(player_one_hand/1).
+:- dynamic(player_two_hand/1).
+:- dynamic(curr_player_turn/1).
+:- dynamic(last_tile_right/1).
+:- dynamic(last_tile_left/1).
 
 /** Utilities **/
 
@@ -91,7 +97,6 @@ open_game_menu:-
     cut_wrapper(get_user_selection(1-4, Selection)),
     cut_wrapper(run_menu_selection(Selection)).
 
-
 run_menu_selection(Selection):-
     (
         (
@@ -119,7 +124,88 @@ run_menu_selection(Selection):-
     ).
 
 start_new_game:-
-    print_message('Starting new game...').
+    print_message('Starting new game...'),
+    sleep(1),
+    cleanup,
+    print_message('Shuffling bone tiles...'),
+    sleep(1),
+    generate_boneyard(GeneratedBoneyard),
+    pick_tiles_from_boneyard(
+        7,
+        GeneratedBoneyard,
+        UpdatedBoneyard,
+        PlayerOnePickedTiles
+    ),
+    pick_tiles_from_boneyard(
+        7,
+        UpdatedBoneyard,
+        _,
+        PlayerTwoPickedTiles
+    ),
+    print_message('Drawing bones for each player...'),
+    sleep(1),
+    print_message('Player 1 Bones:'),
+    print_message(PlayerOnePickedTiles),
+    print_message('Plaer 2 Bones:'),
+    print_message(PlayerTwoPickedTiles).
+
+
+% When trying to pick from empty boneyard, return empty updated boneyard
+% and empty picked tiles.
+pick_tiles_from_boneyard(_, [], [], []):-
+    !.
+
+% Getting one bone from boneyard, should return that bone in picked
+% tiles and update the boneyard for removing that bone.
+pick_tiles_from_boneyard(1, [BoneTile | RestBoneyard], RestBoneyard, [BoneTile]):-
+    !.
+
+% For each bone, remove it from the boneyard, and add it to the
+% picked tiles.
+% Continue this process until reaching the last bone tile to collect.
+pick_tiles_from_boneyard(
+    NumTiles,
+    [BoneTile | RestBoneyard],
+    UpdatedBoneyard,
+    [BoneTile | PickedTiles]
+):-
+    NewNumTiles is NumTiles - 1,
+    pick_tiles_from_boneyard(
+        NewNumTiles,
+        RestBoneyard,
+        UpdatedBoneyard,
+        PickedTiles
+    ),
+    !.
+
+board_is_empty(Board-Board, empty):- !.
+board_is_empty([_ | RestBoard]-RestBoard, noempty):- !.
+
+% append_tile_on_board(T1-T1, Tile, _, [Tile | T1]-T1):- !.
+% For this to work, board MUST be declared empty as [T1]-T1.
+append_tile_on_board(
+    LeftSideBoard-RestBoard,
+    Tile,
+    left,
+    [Tile | LeftSideBoard]-RestBoard
+):-
+    !,
+    retractall(last_tile_left(_)),
+    assert(last_tile_left(Tile)).
+
+append_tile_on_board(
+    LeftSideBoard-[Tile | RestBoard],
+    Tile,
+    right,
+    LeftSideBoard-RestBoard
+):-
+    !,
+    retractall(last_tile_right(_)),
+    assert(last_tile_right(Tile)).
+
+get_last_tiles(LeftTile, RightTile):-
+    last_tile_left(LeftTile),
+    last_tile_right(RightTile).
 
 enter_settings:-
     print_message('Enter settings...').
@@ -132,7 +218,13 @@ set_curr_game_state(GameState):-
     assert(curr_game_state(GameState)).
 
 cleanup:-
-    retractall(curr_game_state(_)).
+    retractall(curr_game_state(_)),
+    retractall(game_board(_)),
+    retractall(player_one_hand(_)),
+    retractall(player_two_hand(_)),
+    retractall(curr_player_turn(_)),
+    retractall(last_tile_right(_)),
+    retractall(last_tile_left(_)).
 
 get_user_selection(StartRange-EndRange, Selection):-
     print_message('Your selection: '),
