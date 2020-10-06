@@ -78,7 +78,7 @@ reverse_bone_dir(bone(LeftVal, RightVal), bone(RightVal, LeftVal)).
 
 % Generates random boneyard for the game
 generate_boneyard(RandomBoneyard):-
-    bagof((X,Y), bone(X, Y), BoneList),
+    bagof(bone(X,Y), bone(X, Y), BoneList),
     random_permutation(BoneList, RandomBoneyard).
 
 
@@ -147,7 +147,23 @@ start_new_game:-
     print_message('Player 1 Bones:'),
     print_message(PlayerOnePickedTiles),
     print_message('Plaer 2 Bones:'),
-    print_message(PlayerTwoPickedTiles).
+    print_message(PlayerTwoPickedTiles),
+    sleep(1),
+    print_message('Determining first turn...'),
+    sleep(1),
+    get_starter_player_and_tile(
+        PlayerOnePickedTiles,
+        PlayerTwoPickedTiles,
+        MaxTile,
+        PlayerStarter
+    ),
+    sleep(1),
+    print_message('Max tile found: '),
+    print_message(MaxTile),
+    sleep(1),
+    print_message('The player which starts the game is: '),
+    print_message(PlayerStarter).
+
 
 
 % When trying to pick from empty boneyard, return empty updated boneyard
@@ -206,6 +222,72 @@ append_tile_on_board(
 get_last_tiles(LeftTile, RightTile):-
     last_tile_left(LeftTile),
     last_tile_right(RightTile).
+
+% Estimates the bigger tile between the two tiles given.
+% The predicate unify only if the first tile is the maximum between the
+% two.
+estimate_bigger_tile(
+    bone(BiggerLeft, BiggerRight),
+    bone(LowerLeft, LowerRight)
+):-
+    (
+	(
+            BiggerLeft == BiggerRight,
+            (
+		(
+                    LowerLeft == LowerRight,
+                    BiggerLeft >= LowerLeft
+                );
+		LowerLeft \== LowerRight
+            )
+        )
+	;
+	(
+            BiggerLeft \== BiggerRight,
+            LowerLeft \== LowerRight,
+            BiggerSum is BiggerLeft + BiggerRight,
+            LowerSum is LowerRight + LowerLeft,
+            BiggerSum >= LowerSum
+        )
+    ).
+
+% Getting the maximum of player hand (list of tile), using
+% estimate_bigger_tile which unify if the first tile is bigger than the
+% other.
+get_max_tile_of_player([Tile], Tile):- !.
+get_max_tile_of_player([Tile | RestPlayerHand], MaxTile):-
+    get_max_tile_of_player(RestPlayerHand, RestMaxTile),
+    !,
+    (
+	(
+            estimate_bigger_tile(Tile, RestMaxTile),
+            MaxTile = Tile
+        )
+	;
+	(
+	    MaxTile = RestMaxTile
+        )
+    ).
+
+% Gets the max tile between the two players and the player which
+% should start to play (The player which has the max tile in his hand,
+% should place it in the game board).
+% Starter values are player_one/player_two.
+get_starter_player_and_tile(PlayerOneTiles, PlayerTwoTiles, MaxTile, Starter):-
+    get_max_tile_of_player(PlayerOneTiles, PlayerOneMaxTile),
+    get_max_tile_of_player(PlayerTwoTiles, PlayerTwoMaxTile),
+    (
+	(
+		estimate_bigger_tile(PlayerOneMaxTile, PlayerTwoMaxTile),
+		MaxTile = PlayerOneMaxTile,
+		Starter = player_one
+        )
+	;
+	(
+		MaxTile = PlayerTwoMaxTile,
+            Starter = player_two
+        )
+    ).
 
 enter_settings:-
     print_message('Enter settings...').
