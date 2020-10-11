@@ -14,6 +14,7 @@
 :- dynamic(curr_player_turn/1).
 :- dynamic(last_tile_right/1).
 :- dynamic(last_tile_left/1).
+:- dynamic(player_identity/2).
 
 /** Utilities **/
 
@@ -29,6 +30,34 @@ cut_wrapper(Predicate):-
     call(Predicate),
     !.
 cut_wrapper(_).
+
+/**
+ * remove_element_from_list(Element, GivenList, ReturnedList):-
+ *   Removes Element given from the GivenList, and return the GivenList
+ *   without the Element in ReturnedList.
+ *
+ *   INPUT:
+ *     Element - Given element to remove from the GivenList.
+ *     GivenList - A list to search for the Element given.
+ *   OUTPUT:
+ *     ReturnedList - The GivenList without the Element.
+ */
+
+% Iterate over the list, when finding element which is not equal to the
+% given element, continue searching.
+remove_element_from_list(Element, [NotElement | RestList1], [NotElement | RestList2]):-
+    Element \= NotElement,
+    !,
+    remove_element_from_list(Element, RestList1, RestList2).
+
+% When finding the element in the list, remove it and keep gather all
+% rest elements.
+remove_element_from_list(Element, [Element | RestList1], RestList2):-
+    !,
+    remove_element_from_list(Element, RestList1, RestList2).
+
+% Empty list will return always empty list.
+remove_element_from_list(_, [], []): !.
 
 
 game_state_attacher(_MENU, run_menu_selection).
@@ -148,7 +177,130 @@ start_new_game:-
     print_message(PlayerOnePickedTiles),
     print_message('Plaer 2 Bones:'),
     print_message(PlayerTwoPickedTiles),
+    assert(player_one_hand(PlayerOnePickedTiles)),
+    assert(player_two_hand(PlayerTwoPickedTiles)),
     sleep(1),
+    determine_starter_player(
+        PlayerOnePickedTiles, PlayerTwoPickedTiles, PlayerStarter, MaxTile
+    ),
+    play_automatic_starter_player(PlayerStarter, MaxTile),
+    start_game_loop.
+
+start_game_loop.
+
+
+% Play automatically for starter player.
+% Basically put the tile on the game board and move the turn to the next
+% player.
+play_automatic_starter_player(PlayerStarter, MaxTile):-
+    print_message(),
+    print_message_without_nl('Playing automatically for starter player: '),
+    print_message(PlayerStarter),
+    sleep(1),
+    print_message_without_nl('Player '),
+    print_message_without_nl(PlayerStarter),
+    print_message_without_nl(' Put the tile '),
+    print_message_without_nl(MaxTile),
+    print_message_without_nl(' on the board'),
+    print_message(),
+    assert(game_board([MaxTile | T1]-T1)),
+    remove_tile_from_player_hand(PlayerStarter, MaxTile).
+
+% Removes tile from a given player hand.
+remove_tile_from_player_hand(Player, Tile):-
+    (
+	(
+            Player == player_one,
+            player_one_hand(PlayerOneHand),
+            remove_element_from_list(Tile, PlayerOneHand, NewPlayerOneHand),
+            retractall(player_one_hand(_)),
+            assert(player_one_hand(NewPlayerOneHand))
+        )
+	;
+	(
+            player_two_hand(PlayerTwoHand),
+            remove_element_from_list(Tile, PlayerTwoHand, NewPlayerTwoHand),
+            retractall(player_two_hand(_)),
+            assert(player_two_hand(NewPlayerTwoHand))
+        )
+    ).
+
+get_appendable_tiles(Tiles, AppendableTiles):-
+    setof(
+        possible_moves(Tile, Side, Reversed),
+        (
+            member(Tile, Tiles),
+            check_appendable_tile(Tile, Side, Reversed, Validity),
+            Validity \== novalid
+        ),
+        AppendableTiles
+    ).
+
+check_appendable_tile(Tile, Side, Reversed, Validity):-
+    get_last_tiles(bone(LeftTileLeftValue, _), bone(_, RightTileRightValue)),
+    Tile = bone(CheckLeftValue, CheckRightValue),
+    (
+	(
+            CheckLeftValue =:= CheckRightValue,
+            !,
+            Reversed = no,
+            (
+		(
+                    Side = right,
+                    RightTileRightValue =:= CheckRightValue,
+                    Validity = valid
+                );
+		(
+                    Side = left,
+                    LeftTileLeftValue =:= CheckLeftValue,
+                    Validity = valid
+                );
+		(
+                    Side = uninitialized,
+                    Validity = novalid
+                )
+            )
+        );
+	(
+            (
+                Side = right,
+                (
+                    (
+                        RightTileRightValue =:= CheckLeftValue,
+                        Reversed = no,
+                        Validity = valid
+                    );
+                    (
+			RightTileRightValue =:= CheckRightValue,
+                        Reversed = yes,
+                        Validity = valid
+                    )
+                )
+            );
+            (
+		Side = left,
+		(
+                    (
+			LeftTileLeftValue =:= CheckRightValue,
+                        Reversed = no,
+                        Validity = valid
+                    );
+                    (
+			LeftTileLeftValue =:= CheckLeftValue,
+                        Reversed = yes,
+                        Validity = valid
+                    )
+                )
+            );
+            (
+		Side = uninitialized,
+                Reversed = uninitialized,
+                Validity = novalid
+            )
+	)
+    ).
+
+determine_starter_player(PlayerOnePickedTiles, PlayerTwoPickedTiles):-
     print_message('Determining first turn...'),
     sleep(1),
     get_starter_player_and_tile(
@@ -162,8 +314,23 @@ start_new_game:-
     print_message(MaxTile),
     sleep(1),
     print_message('The player which starts the game is: '),
-    print_message(PlayerStarter).
+    print_message(PlayerStarter),
+    set_current_turn(PlayerStarter).
 
+set_next_turn:-
+    curr_player_turn(CurrentPlayer),
+    (
+        (
+            CurrentPlayer == player_one,
+            set_current_turn(player_two)
+        );
+        set_current_turn(player_two)
+    ).
+
+% Sets the PlayerID as the current turn player
+set_current_turn(PlayerID):-
+    retractall(curr_player_turn(_)),
+    assert(curr_player_turn(PlayerID)).
 
 
 % When trying to pick from empty boneyard, return empty updated boneyard
@@ -207,7 +374,9 @@ append_tile_on_board(
 ):-
     !,
     retractall(last_tile_left(_)),
-    assert(last_tile_left(Tile)).
+    retractall(game_board(_)),
+    assert(last_tile_left(Tile)),
+    assert(game_board([Tile | LeftSideBoard]-RestBoard)).
 
 append_tile_on_board(
     LeftSideBoard-[Tile | RestBoard],
@@ -217,7 +386,9 @@ append_tile_on_board(
 ):-
     !,
     retractall(last_tile_right(_)),
-    assert(last_tile_right(Tile)).
+    retractall(game_board(_)),
+    assert(last_tile_right(Tile)),
+    assert(game_board(LeftSideBoard-RestBoard)).
 
 get_last_tiles(LeftTile, RightTile):-
     last_tile_left(LeftTile),
@@ -306,7 +477,8 @@ cleanup:-
     retractall(player_two_hand(_)),
     retractall(curr_player_turn(_)),
     retractall(last_tile_right(_)),
-    retractall(last_tile_left(_)).
+    retractall(last_tile_left(_)),
+    retractall(player_identity(_)).
 
 get_user_selection(StartRange-EndRange, Selection):-
     print_message('Your selection: '),
@@ -419,6 +591,9 @@ print_open_game_message:-
 print_message(Message):-
     write(Message),
     nl.
+
+print_message_without_nl(Message):-
+    write(Message).
 
 get_user_selection(Selection):-
     get(Selection).
