@@ -57,10 +57,8 @@ remove_element_from_list(Element, [Element | RestList1], RestList2):-
     remove_element_from_list(Element, RestList1, RestList2).
 
 % Empty list will return always empty list.
-remove_element_from_list(_, [], []): !.
+remove_element_from_list(_, [], []).
 
-
-game_state_attacher(_MENU, run_menu_selection).
 
 /**
  * Game roles predicates
@@ -102,6 +100,131 @@ bone(4, 6).
 bone(5, 6).
 bone(6, 6).
 
+/** Displayable bone tiles **/
+displayable_bone(bone(0, 0), "\uD83C\uDC31").
+displayable_bone(bone(0, 1), "\uD83C\uDC32").
+displayable_bone(bone(0, 2), "\uD83C\uDC33").
+displayable_bone(bone(0, 3), "\uD83C\uDC34").
+displayable_bone(bone(0, 4), "\uD83C\uDC35").
+displayable_bone(bone(0, 5), "\uD83C\uDC36").
+displayable_bone(bone(0, 6), "\uD83C\uDC37").
+
+displayable_bone(bone(1, 0), "\uD83C\uDC38").
+displayable_bone(bone(1, 1), "\uD83C\uDC39").
+displayable_bone(bone(1, 2), "\uD83C\uDC3A").
+displayable_bone(bone(1, 3), "\uD83C\uDC3B").
+displayable_bone(bone(1, 4), "\uD83C\uDC3C").
+displayable_bone(bone(1, 5), "\uD83C\uDC3D").
+displayable_bone(bone(1, 6), "\uD83C\uDC3E").
+
+
+displayable_bone(bone(2, 0), "\uD83C\uDC3F").
+displayable_bone(bone(2, 1), "\uD83C\uDC40").
+displayable_bone(bone(2, 2), "\uD83C\uDC41").
+displayable_bone(bone(2, 3), "\uD83C\uDC42").
+displayable_bone(bone(2, 4), "\uD83C\uDC43").
+displayable_bone(bone(2, 5), "\uD83C\uDC44").
+displayable_bone(bone(2, 6), "\uD83C\uDC45").
+
+displayable_bone(bone(3, 0), "\uD83C\uDC46").
+displayable_bone(bone(3, 1), "\uD83C\uDC47").
+displayable_bone(bone(3, 2), "\uD83C\uDC48").
+displayable_bone(bone(3, 3), "\uD83C\uDC49").
+displayable_bone(bone(3, 4), "\uD83C\uDC4A").
+displayable_bone(bone(3, 5), "\uD83C\uDC4B").
+displayable_bone(bone(3, 6), "\uD83C\uDC4C").
+
+displayable_bone(bone(4, 0), "\uD83C\uDC4D").
+displayable_bone(bone(4, 1), "\uD83C\uDC4E").
+displayable_bone(bone(4, 2), "\uD83C\uDC4F").
+displayable_bone(bone(4, 3), "\uD83C\uDC50").
+displayable_bone(bone(4, 4), "\uD83C\uDC51").
+displayable_bone(bone(4, 5), "\uD83C\uDC52").
+displayable_bone(bone(4, 6), "\uD83C\uDC53").
+
+displayable_bone(bone(5, 0), "\uD83C\uDC54").
+displayable_bone(bone(5, 1), "\uD83C\uDC55").
+displayable_bone(bone(5, 2), "\uD83C\uDC56").
+displayable_bone(bone(5, 3), "\uD83C\uDC57").
+displayable_bone(bone(5, 4), "\uD83C\uDC58").
+displayable_bone(bone(5, 5), "\uD83C\uDC59").
+displayable_bone(bone(5, 6), "\uD83C\uDC5A").
+
+displayable_bone(bone(6, 0), "\uD83C\uDC5B").
+displayable_bone(bone(6, 1), "\uD83C\uDC5C").
+displayable_bone(bone(6, 2), "\uD83C\uDC5D").
+displayable_bone(bone(6, 3), "\uD83C\uDC5E").
+displayable_bone(bone(6, 4), "\uD83C\uDC5F").
+displayable_bone(bone(6, 5), "\uD83C\uDC60").
+displayable_bone(bone(6, 6), "\uD83C\uDC61").
+
+displayable_hand_bone(hide_bone, "\uD83C\uDC62").
+
+displayable_hand_bone(bone(0, 0), "\uD83C\uDC63").
+displayable_hand_bone(bone(0, 1), "\uD83C\uDC64").
+displayable_hand_bone(bone(0, 2), "\uD83C\uDC65").
+displayable_hand_bone(bone(0, 3), "\uD83C\uDC66").
+displayable_hand_bone(bone(0, 4), "\uD83C\uDC67").
+displayable_hand_bone(bone(0, 5), "\uD83C\uDC68").
+displayable_hand_bone(bone(0, 6), "\uD83C\uDC69").
+
+displayable_hand_bone(bone(1, 0), "\uD83C\uDC6A").
+displayable_hand_bone(bone(1, 1), "\uD83C\uDC6B").
+displayable_hand_bone(bone(1, 2), "\uD83C\uDC6C").
+displayable_hand_bone(bone(1, 3), "\uD83C\uDC6D").
+displayable_hand_bone(bone(1, 4), "\uD83C\uDC6E").
+displayable_hand_bone(bone(1, 5), "\uD83C\uDC6F").
+displayable_hand_bone(bone(1, 6), "\uD83C\uDC70").
+
+displayable_hand_bone(bone(2, 0), "\uD83C\uDC71").
+displayable_hand_bone(bone(2, 1), "\uD83C\uDC72").
+displayable_hand_bone(bone(2, 2), "\uD83C\uDC73").
+displayable_hand_bone(bone(2, 3), "\uD83C\uDC74").
+displayable_hand_bone(bone(2, 4), "\uD83C\uDC75").
+displayable_hand_bone(bone(2, 5), "\uD83C\uDC76").
+displayable_hand_bone(bone(2, 6), "\uD83C\uDC77").
+
+displayable_hand_bone(bone(3, 0), "\uD83C\uDC78").
+displayable_hand_bone(bone(3, 1), "\uD83C\uDC79").
+displayable_hand_bone(bone(3, 2), "\uD83C\uDC7A").
+displayable_hand_bone(bone(3, 3), "\uD83C\uDC7B").
+displayable_hand_bone(bone(3, 4), "\uD83C\uDC7C").
+displayable_hand_bone(bone(3, 5), "\uD83C\uDC7D").
+displayable_hand_bone(bone(3, 6), "\uD83C\uDC7E").
+
+displayable_hand_bone(bone(4, 0), "\uD83C\uDC7F").
+displayable_hand_bone(bone(4, 1), "\uD83C\uDC80").
+displayable_hand_bone(bone(4, 2), "\uD83C\uDC81").
+displayable_hand_bone(bone(4, 3), "\uD83C\uDC82").
+displayable_hand_bone(bone(4, 4), "\uD83C\uDC83").
+displayable_hand_bone(bone(4, 5), "\uD83C\uDC84").
+displayable_hand_bone(bone(4, 6), "\uD83C\uDC85").
+
+displayable_hand_bone(bone(5, 0), "\uD83C\uDC86").
+displayable_hand_bone(bone(5, 1), "\uD83C\uDC87").
+displayable_hand_bone(bone(5, 2), "\uD83C\uDC88").
+displayable_hand_bone(bone(5, 3), "\uD83C\uDC89").
+displayable_hand_bone(bone(5, 4), "\uD83C\uDC8A").
+displayable_hand_bone(bone(5, 5), "\uD83C\uDC8B").
+displayable_hand_bone(bone(5, 6), "\uD83C\uDC8C").
+
+displayable_hand_bone(bone(6, 0), "\uD83C\uDC8D").
+displayable_hand_bone(bone(6, 1), "\uD83C\uDC8E").
+displayable_hand_bone(bone(6, 2), "\uD83C\uDC8F").
+displayable_hand_bone(bone(6, 3), "\uD83C\uDC90").
+displayable_hand_bone(bone(6, 4), "\uD83C\uDC91").
+displayable_hand_bone(bone(6, 5), "\uD83C\uDC92").
+displayable_hand_bone(bone(6, 6), "\uD83C\uDC93").
+
+/** Displaying players names **/
+displayable_player(player_one, 'Player one').
+displayable_player(player_two, 'Player two').
+
+displayable_player_type(user_player, 'You').
+displayable_player_type(computer_random, 'Computer Random Bot').
+displayable_player_type(computer_statistical, 'Computer Statistical Bot').
+
+
 % Reversing bone direction utility
 reverse_bone_dir(bone(LeftVal, RightVal), bone(RightVal, LeftVal)).
 
@@ -115,6 +238,7 @@ start:-
     see(user),
     tell(user),
     cut_wrapper(print_open_game_message),
+    cut_wrapper(set_default_settings),
     cut_wrapper(open_game_menu),
     cleanup,
     seen,
@@ -174,9 +298,11 @@ start_new_game:-
     print_message('Drawing bones for each player...'),
     sleep(1),
     print_message('Player 1 Bones:'),
-    print_message(PlayerOnePickedTiles),
-    print_message('Plaer 2 Bones:'),
-    print_message(PlayerTwoPickedTiles),
+    print_player_full_hand(PlayerOnePickedTiles),
+    print_message(''),
+    print_message('Player 2 Bones:'),
+    print_computer_full_hand(PlayerTwoPickedTiles),
+    print_message(''),
     assert(player_one_hand(PlayerOnePickedTiles)),
     assert(player_two_hand(PlayerTwoPickedTiles)),
     sleep(1),
@@ -193,16 +319,16 @@ start_game_loop.
 % Basically put the tile on the game board and move the turn to the next
 % player.
 play_automatic_starter_player(PlayerStarter, MaxTile):-
-    print_message(),
+    print_message(''),
     print_message_without_nl('Playing automatically for starter player: '),
     print_message(PlayerStarter),
     sleep(1),
     print_message_without_nl('Player '),
     print_message_without_nl(PlayerStarter),
     print_message_without_nl(' Put the tile '),
-    print_message_without_nl(MaxTile),
+    print_board_tile(MaxTile),
     print_message_without_nl(' on the board'),
-    print_message(),
+    print_message(''),
     assert(game_board([MaxTile | T1]-T1)),
     remove_tile_from_player_hand(PlayerStarter, MaxTile).
 
@@ -300,7 +426,12 @@ check_appendable_tile(Tile, Side, Reversed, Validity):-
 	)
     ).
 
-determine_starter_player(PlayerOnePickedTiles, PlayerTwoPickedTiles):-
+determine_starter_player(
+    PlayerOnePickedTiles,
+    PlayerTwoPickedTiles,
+    PlayerStarter,
+    MaxTile
+):-
     print_message('Determining first turn...'),
     sleep(1),
     get_starter_player_and_tile(
@@ -311,7 +442,8 @@ determine_starter_player(PlayerOnePickedTiles, PlayerTwoPickedTiles):-
     ),
     sleep(1),
     print_message('Max tile found: '),
-    print_message(MaxTile),
+    print_player_tile(MaxTile),
+    print_message(''),
     sleep(1),
     print_message('The player which starts the game is: '),
     print_message(PlayerStarter),
@@ -332,6 +464,15 @@ set_current_turn(PlayerID):-
     retractall(curr_player_turn(_)),
     assert(curr_player_turn(PlayerID)).
 
+% Sets the Player type for a given Player (player_one / player_two)
+set_player_identity(Player, PlayerType):-
+    retractall(player_identity(Player, _)),
+    assert(player_identity(Player, PlayerType)).
+
+% Sets the default settings for the game to start
+set_default_settings:-
+    set_player_identity(player_one, user_player),
+    set_player_identity(player_two, computer_random).
 
 % When trying to pick from empty boneyard, return empty updated boneyard
 % and empty picked tiles.
@@ -449,19 +590,119 @@ get_starter_player_and_tile(PlayerOneTiles, PlayerTwoTiles, MaxTile, Starter):-
     get_max_tile_of_player(PlayerTwoTiles, PlayerTwoMaxTile),
     (
 	(
-		estimate_bigger_tile(PlayerOneMaxTile, PlayerTwoMaxTile),
-		MaxTile = PlayerOneMaxTile,
-		Starter = player_one
+	    estimate_bigger_tile(PlayerOneMaxTile, PlayerTwoMaxTile),
+            MaxTile = PlayerOneMaxTile,
+            Starter = player_one
         )
 	;
 	(
-		MaxTile = PlayerTwoMaxTile,
+            MaxTile = PlayerTwoMaxTile,
             Starter = player_two
         )
     ).
 
 enter_settings:-
-    print_message('Enter settings...').
+    print_settings_screen,
+    control_settings.
+
+control_settings:-
+    print_settings_main_choices,
+    get_user_selection(1-3, Selection),
+    run_settings_main_selection(Selection).
+
+run_settings_main_selection(Selection):-
+    (
+        (
+            Selection == 1,
+            enter_player_selection(player_one),
+            enter_settings
+        )
+        ;
+        (
+            Selection == 2,
+            enter_player_selection(player_two),
+            enter_settings
+        )
+        ;
+        (
+            print_message('Exiting Settings'),
+            print_message('')
+        )
+    ).
+
+enter_player_selection(Player):-
+    print_message_without_nl('Please, select one of the below options for '),
+    displayable_player(Player, DisplayPlayer),
+    print_message_without_nl(DisplayPlayer),
+    print_message(':'),
+    print_player_options,
+    get_user_selection(1-4, Selection),
+    control_player_selection(Player, Selection).
+
+control_player_selection(Player, Selection):-
+    (
+        (
+            Selection == 1,
+            set_player_identity(Player, user_player)
+        )
+        ;
+        (
+            Selection == 2,
+            set_player_identity(Player, computer_random)
+        )
+        ;
+        (
+            Selection == 3,
+            set_player_identity(Player, computer_statistical)
+        )
+        ;
+        (
+            print_message('Exit player selection.'),
+            print_message('')
+        )
+    ).
+
+print_player_options:-
+    print_message(''),
+    print_message_without_nl('1. '),
+    displayable_player_type(user_player, DisplayUser),
+    print_message(DisplayUser),
+    print_message_without_nl('2. '),
+    displayable_player_type(computer_random, DisplayCompRand),
+    print_message(DisplayCompRand),
+    print_message_without_nl('3. '),
+    displayable_player_type(computer_statistical, DisplayCompStats),
+    print_message(DisplayCompStats),
+    print_message('4. Exit Selection'),
+    print_message('').
+
+print_settings_main_choices:-
+    print_message(''),
+    print_message('Please, select one of the following options to proceed:'),
+    print_message('1. Change Player One Type'),
+    print_message('2. Change Player Two Type'),
+    print_message('3. Exit'),
+    print_message('').
+
+print_settings_screen:-
+    print_message('######## Settings Menu ########'),
+    print_message(''),
+    print_message('Here you can select which players will play the game.'),
+    print_message(''),
+    print_message('Currently settings:'),
+    print_message(''),
+    print_message_without_nl('Player one: '),
+    player_identity(player_one, PlayerOneIdentity),
+    displayable_player_type(PlayerOneIdentity, DisplayPlayerOne),
+    print_message(DisplayPlayerOne),
+    print_message_without_nl('Player two: '),
+    player_identity(player_two, PlayerTwoIdentity),
+    displayable_player_type(PlayerTwoIdentity, DisplayPlayerTwo),
+    print_message(DisplayPlayerTwo),
+    print_message(''),
+    print_message('############################').
+
+
 
 exit_game:-
     print_message('Bye, see you next time!').
@@ -582,9 +823,43 @@ print_main_options:-
     cut_wrapper(print_message('4. Exit')),
     cut_wrapper(print_message('')).
 
+
 print_open_game_message:-
     cut_wrapper(print_message('Welcome to Prolog-Domino Game!')),
     cut_wrapper(print_message('A Domino game implemented in Prolog, which is fun and challenging.')).
+
+
+print_computer_full_hand(Tiles):-
+    forall(
+        member(_, Tiles),
+        print_hide_tile
+    ).
+
+
+print_player_full_hand(Tiles):-
+    forall(
+        member(Tile, Tiles),
+        print_player_tile(Tile)
+    ).
+
+print_player_tile(Tile):-
+    displayable_hand_bone(Tile, UnicodeValue),
+    print_unicode_value(UnicodeValue).
+
+
+print_board_tile(Tile):-
+    displayable_bone(Tile, UnicodeValue),
+    print_unicode_value(UnicodeValue).
+
+
+print_hide_tile:-
+    displayable_hand_bone(hide_bone, UnicodeValue),
+    print_unicode_value(UnicodeValue).
+
+
+print_unicode_value(UnicodeValue):-
+    atom_string(X, UnicodeValue),
+    write(X).
 
 
 /** UI Predicates **/
