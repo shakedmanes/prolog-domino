@@ -5,6 +5,9 @@
  *
  * This program was developed using SWI-Prolog, so it depends
  * on the SWI-Prolog Prolog implementation standards.
+ *
+ * Also note that this programs requires SWI-Prolog font size of 36
+ * to run properly.
  */
 
 :- dynamic(curr_game_state/1).
@@ -217,8 +220,8 @@ displayable_hand_bone(bone(6, 5), "\uD83C\uDC92").
 displayable_hand_bone(bone(6, 6), "\uD83C\uDC93").
 
 /** Displaying players names **/
-displayable_player(player_one, 'Player one').
-displayable_player(player_two, 'Player two').
+displayable_player(player_one, 'Player 1').
+displayable_player(player_two, 'Player 2').
 
 displayable_player_type(user_player, 'You').
 displayable_player_type(computer_random, 'Computer Random Bot').
@@ -278,10 +281,10 @@ run_menu_selection(Selection):-
 
 start_new_game:-
     print_message('Starting new game...'),
-    sleep(1),
+    sleep(2),
     cleanup,
     print_message('Shuffling bone tiles...'),
-    sleep(1),
+    sleep(2),
     generate_boneyard(GeneratedBoneyard),
     pick_tiles_from_boneyard(
         7,
@@ -296,16 +299,16 @@ start_new_game:-
         PlayerTwoPickedTiles
     ),
     print_message('Drawing bones for each player...'),
-    sleep(1),
+    sleep(2),
     print_message('Player 1 Bones:'),
-    print_player_full_hand(PlayerOnePickedTiles),
+    print_player_full_hand(player_one, PlayerOnePickedTiles),
     print_message(''),
     print_message('Player 2 Bones:'),
-    print_computer_full_hand(PlayerTwoPickedTiles),
+    print_player_full_hand(player_two, PlayerTwoPickedTiles),
     print_message(''),
     assert(player_one_hand(PlayerOnePickedTiles)),
     assert(player_two_hand(PlayerTwoPickedTiles)),
-    sleep(1),
+    sleep(5),
     determine_starter_player(
         PlayerOnePickedTiles, PlayerTwoPickedTiles, PlayerStarter, MaxTile
     ),
@@ -321,10 +324,10 @@ start_game_loop.
 play_automatic_starter_player(PlayerStarter, MaxTile):-
     print_message(''),
     print_message_without_nl('Playing automatically for starter player: '),
-    print_message(PlayerStarter),
-    sleep(1),
-    print_message_without_nl('Player '),
-    print_message_without_nl(PlayerStarter),
+    print_player_desc(PlayerStarter),
+    print_message(''),
+    sleep(2),
+    print_player_desc(PlayerStarter),
     print_message_without_nl(' Put the tile '),
     print_board_tile(MaxTile),
     print_message_without_nl(' on the board'),
@@ -446,7 +449,8 @@ determine_starter_player(
     print_message(''),
     sleep(1),
     print_message('The player which starts the game is: '),
-    print_message(PlayerStarter),
+    print_player_desc(PlayerStarter),
+    print_message(''),
     set_current_turn(PlayerStarter).
 
 set_next_turn:-
@@ -828,18 +832,41 @@ print_open_game_message:-
     cut_wrapper(print_message('Welcome to Prolog-Domino Game!')),
     cut_wrapper(print_message('A Domino game implemented in Prolog, which is fun and challenging.')).
 
+print_player_desc(Player):-
+    displayable_player(Player, DisplayPlayer),
+    player_identity(Player, PlayerIdentity),
+    displayable_player_type(PlayerIdentity, DisplayPlayerType),
+    print_message_without_nl(DisplayPlayer),
+    print_message_without_nl(' ('),
+    print_message_without_nl(DisplayPlayerType),
+    print_message_without_nl(') ').
 
-print_computer_full_hand(Tiles):-
+
+print_computer_tiles(Tiles):-
     forall(
         member(_, Tiles),
         print_hide_tile
     ).
 
 
-print_player_full_hand(Tiles):-
+print_player_tiles(Tiles):-
     forall(
         member(Tile, Tiles),
         print_player_tile(Tile)
+    ).
+
+
+print_player_full_hand(Player, Tiles):-
+    player_identity(Player, Identity),
+    (
+        (
+            Identity == user_player,
+            print_player_tiles(Tiles)
+        )
+        ;
+        (
+            print_computer_tiles(Tiles)
+        )
     ).
 
 print_player_tile(Tile):-
