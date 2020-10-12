@@ -63,6 +63,15 @@ remove_element_from_list(Element, [Element | RestList1], RestList2):-
 remove_element_from_list(_, [], []).
 
 
+member_diff_list(Element, List-Back):-
+    List \== Back,
+    List = [Element | _].
+member_diff_list(Element, List-Back):-
+    List \== Back,
+    List = [_ | Tail],
+    member_diff_list(Element, Tail-Back).
+
+
 /**
  * Game roles predicates
  */
@@ -308,14 +317,18 @@ start_new_game:-
     print_message(''),
     assert(player_one_hand(PlayerOnePickedTiles)),
     assert(player_two_hand(PlayerTwoPickedTiles)),
-    sleep(5),
+    sleep(10),
     determine_starter_player(
         PlayerOnePickedTiles, PlayerTwoPickedTiles, PlayerStarter, MaxTile
     ),
     play_automatic_starter_player(PlayerStarter, MaxTile),
+    sleep(3),
+    print_message('Organizing game table...'),
+    sleep(3),
     start_game_loop.
 
-start_game_loop.
+start_game_loop:-
+    print_game_screen.
 
 
 % Play automatically for starter player.
@@ -326,7 +339,7 @@ play_automatic_starter_player(PlayerStarter, MaxTile):-
     print_message_without_nl('Playing automatically for starter player: '),
     print_player_desc(PlayerStarter),
     print_message(''),
-    sleep(2),
+    sleep(5),
     print_player_desc(PlayerStarter),
     print_message_without_nl(' Put the tile '),
     print_board_tile(MaxTile),
@@ -445,7 +458,7 @@ determine_starter_player(
     ),
     sleep(1),
     print_message('Max tile found: '),
-    print_player_tile(MaxTile),
+    print_visible_tile(MaxTile),
     print_message(''),
     sleep(1),
     print_message('The player which starts the game is: '),
@@ -832,6 +845,38 @@ print_open_game_message:-
     cut_wrapper(print_message('Welcome to Prolog-Domino Game!')),
     cut_wrapper(print_message('A Domino game implemented in Prolog, which is fun and challenging.')).
 
+print_game_screen:-
+    clear_screen,
+    print_game_border,
+    print_player_two_side,
+    print_game_border,
+    print_board_tiles,
+    print_game_border,
+    print_player_one_side,
+    print_game_border.
+
+print_game_border:-
+    print_message('********************************************').
+
+print_player_two_side:-
+    print_player_desc(player_two),
+    print_message(''),
+    player_two_hand(PlayerTiles),
+    print_player_full_hand(player_two, PlayerTiles),
+    print_message('').
+
+
+
+
+print_player_one_side:-
+    player_one_hand(PlayerTiles),
+    print_player_full_hand(player_one, PlayerTiles),
+    print_message(''),
+    print_player_desc(player_one),
+    print_message('').
+
+
+
 print_player_desc(Player):-
     displayable_player(Player, DisplayPlayer),
     player_identity(Player, PlayerIdentity),
@@ -842,18 +887,26 @@ print_player_desc(Player):-
     print_message_without_nl(') ').
 
 
-print_computer_tiles(Tiles):-
+print_hide_tiles(Tiles):-
     forall(
         member(_, Tiles),
         print_hide_tile
     ).
 
 
-print_player_tiles(Tiles):-
+print_visible_tiles(Tiles):-
     forall(
         member(Tile, Tiles),
-        print_player_tile(Tile)
+        print_visible_tile(Tile)
     ).
+
+print_board_tiles:-
+    game_board(BoardTiles),
+    forall(
+        member_diff_list(Tile, BoardTiles),
+        print_board_tile(Tile)
+    ),
+    print_message('').
 
 
 print_player_full_hand(Player, Tiles):-
@@ -861,15 +914,15 @@ print_player_full_hand(Player, Tiles):-
     (
         (
             Identity == user_player,
-            print_player_tiles(Tiles)
+            print_visible_tiles(Tiles)
         )
         ;
         (
-            print_computer_tiles(Tiles)
+            print_hide_tiles(Tiles)
         )
     ).
 
-print_player_tile(Tile):-
+print_visible_tile(Tile):-
     displayable_hand_bone(Tile, UnicodeValue),
     print_unicode_value(UnicodeValue).
 
@@ -896,6 +949,10 @@ print_message(Message):-
 
 print_message_without_nl(Message):-
     write(Message).
+
+
+clear_screen:-
+    write('\33\[2J').
 
 get_user_selection(Selection):-
     get(Selection).
