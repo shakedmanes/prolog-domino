@@ -10,14 +10,19 @@
  * to run properly.
  */
 
-:- dynamic(curr_game_state/1).
+:- dynamic(game_state/1).
 :- dynamic(game_board/1).
-:- dynamic(player_one_hand/1).
-:- dynamic(player_two_hand/1).
+:- dynamic(game_boneyard/1).
+:- dynamic(game_boneyard_count/1).
+:- dynamic(game_result/1).
 :- dynamic(curr_player_turn/1).
 :- dynamic(last_tile_right/1).
 :- dynamic(last_tile_left/1).
 :- dynamic(player_identity/2).
+:- dynamic(player_hand/2).
+:- dynamic(player_hand_count/2).
+:- dynamic(player_hand_weight/2).
+
 
 /** Utilities **/
 
@@ -63,13 +68,18 @@ remove_element_from_list(Element, [Element | RestList1], RestList2):-
 remove_element_from_list(_, [], []).
 
 
-member_diff_list(Element, List-Back):-
-    List \== Back,
+member_diff_list(Element, List-RestList):-
+    List \== RestList,
     List = [Element | _].
-member_diff_list(Element, List-Back):-
-    List \== Back,
+member_diff_list(Element, List-RestList):-
+    List \== RestList,
     List = [_ | Tail],
-    member_diff_list(Element, Tail-Back).
+    member_diff_list(Element, Tail-RestList).
+
+list_length([], 0).
+list_length([_ | Rest], Length):-
+    list_length(Rest, RestLength),
+    Length is RestLength + 1.
 
 
 /**
@@ -249,6 +259,7 @@ generate_boneyard(RandomBoneyard):-
 start:-
     see(user),
     tell(user),
+    cleanup,
     cut_wrapper(print_open_game_message),
     cut_wrapper(set_default_settings),
     cut_wrapper(open_game_menu),
@@ -289,24 +300,17 @@ run_menu_selection(Selection):-
     ).
 
 start_new_game:-
+    cleanup_game_states,
+    set_game_state(in_game),
     print_message('Starting new game...'),
     sleep(2),
-    cleanup,
     print_message('Shuffling bone tiles...'),
     sleep(2),
     generate_boneyard(GeneratedBoneyard),
-    pick_tiles_from_boneyard(
-        7,
-        GeneratedBoneyard,
-        UpdatedBoneyard,
-        PlayerOnePickedTiles
-    ),
-    pick_tiles_from_boneyard(
-        7,
-        UpdatedBoneyard,
-        _,
-        PlayerTwoPickedTiles
-    ),
+    set_game_boneyard(GeneratedBoneyard),
+    set_game_boneyard_count(28),
+    pick_tiles_from_boneyard(7, PlayerOnePickedTiles),
+    pick_tiles_from_boneyard(7, PlayerTwoPickedTiles),
     print_message('Drawing bones for each player...'),
     sleep(2),
     print_message('Player 1 Bones:'),
@@ -315,8 +319,12 @@ start_new_game:-
     print_message('Player 2 Bones:'),
     print_player_full_hand(player_two, PlayerTwoPickedTiles),
     print_message(''),
-    assert(player_one_hand(PlayerOnePickedTiles)),
-    assert(player_two_hand(PlayerTwoPickedTiles)),
+    assert(player_hand(player_one, PlayerOnePickedTiles)),
+    assert(player_hand(player_two, PlayerTwoPickedTiles)),
+    assert(player_hand_count(player_one, 7)),
+    assert(player_hand_count(player_two, 7)),
+    calculate_and_set_player_hand_weight(player_one, PlayerOnePickedTiles),
+    calculate_and_set_player_hand_weight(player_two, PlayerTwoPickedTiles),
     sleep(10),
     determine_starter_player(
         PlayerOnePickedTiles, PlayerTwoPickedTiles, PlayerStarter, MaxTile
@@ -328,7 +336,242 @@ start_new_game:-
     start_game_loop.
 
 start_game_loop:-
-    print_game_screen.
+    cut_wrapper(print_game_screen),
+    cut_wrapper(play_player_turn),
+    cut_wrapper(set_next_turn),
+    cut_wrapper(update_game_state),
+    cut_wrapper(continue_game_loop).
+
+ask_user_play(Player):-
+    player_hand(Player, PlayerHand),
+    get_appendable_tiles(PlayerHand, PossibleMoves),
+    (
+        (
+            PossibleMoves == [],
+            !,
+            show_automatic_draw_boneyard(Player)
+
+
+        )
+        ;
+        (
+            !,
+            print_message('Please select one of the following options to play: '),
+            show_possible_moves_selection(PossibleMoves, 1-Range),
+            get_user_selection(1-Range, Selection),
+            perform_user_play(Player, PossibleMoves, Selection)
+        )
+    ).
+
+
+show_possible_moves_selection(PossibleMoves, 1-Length):-
+    list_length(PossibleMoves, Length),
+    print_possible_moves(0, PossibleMoves).
+
+
+print_possible_moves(_, []).
+print_possible_moves(Index, [possible_move(bone(LeftValue, RightValue), Side, Reversed) | RestMoves]):-
+    NextIndex is Index + 1,
+    print_message_without_nl(NextIndex),
+    print_message_without_nl('. '),
+    (
+        (
+            Reversed == yes,
+            !,
+            ParsedTile = bone(RightValue, LeftValue)
+        )
+        ;
+        (
+            !,
+            ParsedTile = bone(LeftValue, RightValue)
+        )
+    ),
+    displayable_bone(ParsedTile, DisplayTile),
+    print_message_without_nl(DisplayTile),
+    print_message_without_nl(' (side: '),
+    print_message_without_nl(Side),
+    print_message(')'),
+    print_possible_moves(NextIndex, RestMoves),
+    !.
+
+
+show_automatic_draw_boneyard(Player):-
+    print_message_without_nl('Sorry, no possible moves found for '),
+    print_player_desc(Player),
+    print_message(''),
+    print_message('Automatically drawing bone from boneyard...'),
+    sleep(5),
+    pick_tiles_from_boneyard(1, [Tile]),
+    add_tile_to_player_hand(Player, Tile).
+
+
+perform_user_play(Player, PossibleMoves, Selection):-
+    nth1(
+        Selection,
+        PossibleMoves,
+        possible_move(bone(LeftValue, RightValue), Side, Reversed)
+    ),
+    (
+        (
+            Reversed == yes,
+            !,
+            ParsedTile = bone(RightValue, LeftValue)
+        )
+        ;
+        (
+            !,
+            ParsedTile = bone(LeftValue, RightValue)
+        )
+    ),
+    game_board(Board),
+    append_tile_on_board(Board, ParsedTile, Side, _),
+    remove_tile_from_player_hand(Player, bone(LeftValue, RightValue)).
+
+
+
+perform_comp_play.
+
+play_player_turn:-
+   curr_player_turn(CurrentPlayer),
+   player_identity(CurrentPlayer, PlayerIdentity),
+   print_message_without_nl('Current turn: '),
+   print_player_desc(CurrentPlayer),
+   print_message(''),
+   (
+       (
+           PlayerIdentity == user_player,
+           !,
+           print_message('Calculating possible moves...'),
+           sleep(3),
+           ask_user_play(CurrentPlayer)
+       )
+       ;
+       (
+           !,
+           perform_comp_play
+       )
+   ).
+
+update_game_state:-
+    player_hand_count(player_one, PlayerOneCount),
+    player_hand_count(player_two, PlayerTwoCount),
+    (
+        (
+            PlayerOneCount == 0,
+            !,
+            set_game_state(end_game),
+            set_game_result(player_one_win)
+        )
+        ;
+        (
+            PlayerTwoCount == 0,
+            !,
+            set_game_state(end_game),
+            set_game_result(player_two_win)
+        )
+        ;
+        (
+            check_possible_tie(IsTie),
+            !,
+            IsTie == yes,
+            (
+                player_hand_weight(player_one, PlayerOneWeight),
+                player_hand_weight(player_two, PlayerTwoWeight),
+                (
+                    (
+                        PlayerOneWeight > PlayerTwoWeight,
+                        GameResult = player_two_win
+                    )
+                    ;
+                    (
+                        PlayerTwoWeight > PlayerOneWeight,
+                        GameResult = player_one_win
+                    )
+                    ;
+                    (
+                        GameResult = tie
+                    )
+                )
+            ),
+            set_game_state(end_game),
+            set_game_result(GameResult)
+        )
+        ;
+        (
+            true
+        )
+    ).
+
+
+
+continue_game_loop:-
+    game_state(CurrentGameState),
+    (
+        (
+            CurrentGameState == in_game,
+            start_game_loop
+        )
+        ;
+        (
+            CurrentGameState == end_game,
+            print_game_result
+        )
+    ).
+
+print_game_result:-
+    game_result(GameResult),
+    (
+        (
+            GameResult == player_one_win,
+            print_message(''),
+            print_message('Player 1 won the game!'),
+            print_players_weights
+
+        )
+        ;
+        (
+            GameResult == player_two_win,
+            print_message(''),
+            print_message('Player 2 won the game!'),
+            print_players_weights
+        )
+        ;
+        (
+            print_message(''),
+            print_message('The game ended up with a tie!')
+        )
+    ).
+
+
+print_players_weights:-
+    player_hand_weight(player_one, PlayerOneWeight),
+    player_hand_weight(player_two, PlayerTwoWeight),
+    print_message(''),
+    print_message_without_nl('Player 1 Weight: '),
+    print_message(PlayerOneWeight),
+    print_message_without_nl('Player 2 Weight: '),
+    print_message(PlayerTwoWeight),
+    print_message('').
+
+
+check_possible_tie(IsTie):-
+    player_hand(player_one, PlayerOneHand),
+    player_hand(player_two, PlayerTwoHand),
+    get_appendable_tiles(PlayerOneHand, PlayerOneMoves),
+    get_appendable_tiles(PlayerTwoHand, PlayerTwoMoves),
+    game_boneyard_count(BoneyardCount),
+    (
+        (
+            PlayerOneMoves == [],
+            PlayerTwoMoves == [],
+            BoneyardCount == 0,
+            IsTie = yes
+        )
+        ;
+        (
+            IsTie = no
+        )
+    ).
 
 
 % Play automatically for starter player.
@@ -346,36 +589,43 @@ play_automatic_starter_player(PlayerStarter, MaxTile):-
     print_message_without_nl(' on the board'),
     print_message(''),
     assert(game_board([MaxTile | T1]-T1)),
-    remove_tile_from_player_hand(PlayerStarter, MaxTile).
+    assert(last_tile_left(MaxTile)),
+    assert(last_tile_right(MaxTile)),
+    remove_tile_from_player_hand(PlayerStarter, MaxTile),
+    set_next_turn.
 
-% Removes tile from a given player hand.
+% Removes given tile from a given player's hand.
 remove_tile_from_player_hand(Player, Tile):-
-    (
-	(
-            Player == player_one,
-            player_one_hand(PlayerOneHand),
-            remove_element_from_list(Tile, PlayerOneHand, NewPlayerOneHand),
-            retractall(player_one_hand(_)),
-            assert(player_one_hand(NewPlayerOneHand))
-        )
-	;
-	(
-            player_two_hand(PlayerTwoHand),
-            remove_element_from_list(Tile, PlayerTwoHand, NewPlayerTwoHand),
-            retractall(player_two_hand(_)),
-            assert(player_two_hand(NewPlayerTwoHand))
-        )
-    ).
+    player_hand(Player, PlayerHand),
+    remove_element_from_list(Tile, PlayerHand, NewPlayerHand),
+    retractall(player_hand(Player, _)),
+    assert(player_hand(Player, NewPlayerHand)),
+    change_player_hand_count(Player, -1),
+    recalculate_and_set_player_hand_weight(Player, Tile, remove).
+
+% Adds given tile to a given player's hand.
+add_tile_to_player_hand(Player, Tile):-
+    player_hand(Player, PlayerHand),
+    append([Tile], PlayerHand, NewPlayerHand),
+    retractall(player_hand(Player, _)),
+    assert(player_hand(Player, NewPlayerHand)),
+    change_player_hand_count(Player, 1),
+    recalculate_and_set_player_hand_weight(Player, Tile, add).
+
 
 get_appendable_tiles(Tiles, AppendableTiles):-
-    setof(
-        possible_moves(Tile, Side, Reversed),
-        (
-            member(Tile, Tiles),
-            check_appendable_tile(Tile, Side, Reversed, Validity),
-            Validity \== novalid
-        ),
-        AppendableTiles
+    (
+	setof(
+            possible_move(Tile, Side, Reversed),
+            (
+		member(Tile, Tiles),
+		check_appendable_tile(Tile, Side, Reversed, Validity),
+		Validity \== novalid
+            ),
+            AppendableTiles
+        )
+	;
+	AppendableTiles = []
     ).
 
 check_appendable_tile(Tile, Side, Reversed, Validity):-
@@ -473,7 +723,7 @@ set_next_turn:-
             CurrentPlayer == player_one,
             set_current_turn(player_two)
         );
-        set_current_turn(player_two)
+        set_current_turn(player_one)
     ).
 
 % Sets the PlayerID as the current turn player
@@ -486,10 +736,66 @@ set_player_identity(Player, PlayerType):-
     retractall(player_identity(Player, _)),
     assert(player_identity(Player, PlayerType)).
 
+% Sets the game boneyard for a given boneyard.
+set_game_boneyard(Boneyard):-
+    retractall(game_boneyard(_)),
+    assert(game_boneyard(Boneyard)).
+
+% Sets the game boneyard tiles count for a given number
+set_game_boneyard_count(BoneyardCount):-
+    retractall(game_boneyard_count(_)),
+    assert(game_boneyard_count(BoneyardCount)).
+
+% Set player hand count by given player and count
+change_player_hand_count(Player, Addition):-
+    player_hand_count(Player, PrevCount),
+    NewCount is PrevCount + Addition,
+    retractall(player_hand_count(Player, _)),
+    assert(player_hand_count(Player, NewCount)).
+
+% Calculate and set player hand weight by given player and tiles
+% for the first time.
+calculate_and_set_player_hand_weight(Player, PlayerTiles):-
+    get_hand_size(PlayerTiles, Weight),
+    retractall(player_hand_weight(Player, _)),
+    assert(player_hand_weight(Player, Weight)).
+
+% Recalculate and set player hand weight by given player and tile and
+% operation (remove/add)
+recalculate_and_set_player_hand_weight(
+    Player,
+    bone(LeftValue, RightValue),
+    Operation
+):-
+    player_hand_weight(Player, Weight),
+    TileSum is LeftValue + RightValue,
+    (
+        (
+            Operation == add,
+            NewWeight is Weight + TileSum
+        )
+        ;
+        (
+            NewWeight is Weight - TileSum
+        )
+    ),
+    retractall(player_hand_weight(Player, _)),
+    assert(player_hand_weight(Player, NewWeight)).
+
 % Sets the default settings for the game to start
 set_default_settings:-
     set_player_identity(player_one, user_player),
     set_player_identity(player_two, computer_random).
+
+% Decorating predicate for the main pick tiles from boneyard which
+% updates the game boneyard.
+pick_tiles_from_boneyard(NumTiles, ReturnedTiles):-
+    game_boneyard(Boneyard),
+    game_boneyard_count(BoneyardCount),
+    NewBoneyardCount is BoneyardCount - NumTiles,
+    pick_tiles_from_boneyard(NumTiles, Boneyard, NewBoneyard, ReturnedTiles),
+    set_game_boneyard(NewBoneyard),
+    set_game_boneyard_count(NewBoneyardCount).
 
 % When trying to pick from empty boneyard, return empty updated boneyard
 % and empty picked tiles.
@@ -618,6 +924,14 @@ get_starter_player_and_tile(PlayerOneTiles, PlayerTwoTiles, MaxTile, Starter):-
         )
     ).
 
+
+get_hand_size([], 0).
+
+get_hand_size([bone(LeftValue, RightValue) | RestTiles], Sum):-
+    get_hand_size(RestTiles, RestSum),
+    Sum is LeftValue + RightValue + RestSum.
+
+
 enter_settings:-
     print_settings_screen,
     control_settings.
@@ -724,19 +1038,31 @@ print_settings_screen:-
 exit_game:-
     print_message('Bye, see you next time!').
 
-set_curr_game_state(GameState):-
-    retractall(curr_game_state(_)),
-    assert(curr_game_state(GameState)).
+set_game_state(GameState):-
+    retractall(game_state(_)),
+    assert(game_state(GameState)).
+
+set_game_result(GameResult):-
+    retractall(game_result(_)),
+    assert(game_result(GameResult)).
 
 cleanup:-
-    retractall(curr_game_state(_)),
+    cleanup_game_states,
+    retractall(player_identity(_, _)).
+
+cleanup_game_states:-
+    retractall(game_state(_)),
     retractall(game_board(_)),
-    retractall(player_one_hand(_)),
-    retractall(player_two_hand(_)),
+    retractall(game_boneyard(_)),
+    retractall(game_boneyard_count(_)),
+    retractall(game_result(_)),
+    retractall(player_hand_count(_, _)),
+    retractall(player_hand_weight(_, _)),
+    retractall(player_hand(_, _)),
     retractall(curr_player_turn(_)),
     retractall(last_tile_right(_)),
-    retractall(last_tile_left(_)),
-    retractall(player_identity(_)).
+    retractall(last_tile_left(_)).
+
 
 get_user_selection(StartRange-EndRange, Selection):-
     print_message('Your selection: '),
@@ -846,14 +1172,14 @@ print_open_game_message:-
     cut_wrapper(print_message('A Domino game implemented in Prolog, which is fun and challenging.')).
 
 print_game_screen:-
-    clear_screen,
     print_game_border,
     print_player_two_side,
     print_game_border,
     print_board_tiles,
     print_game_border,
     print_player_one_side,
-    print_game_border.
+    print_game_border,
+    print_game_boneyard.
 
 print_game_border:-
     print_message('********************************************').
@@ -861,7 +1187,7 @@ print_game_border:-
 print_player_two_side:-
     print_player_desc(player_two),
     print_message(''),
-    player_two_hand(PlayerTiles),
+    player_hand(player_two, PlayerTiles),
     print_player_full_hand(player_two, PlayerTiles),
     print_message('').
 
@@ -869,13 +1195,20 @@ print_player_two_side:-
 
 
 print_player_one_side:-
-    player_one_hand(PlayerTiles),
+    player_hand(player_one, PlayerTiles),
     print_player_full_hand(player_one, PlayerTiles),
     print_message(''),
     print_player_desc(player_one),
     print_message('').
 
-
+print_game_boneyard:-
+    game_boneyard_count(BoneyardCount),
+    print_message(''),
+    print_message_without_nl('[ '),
+    print_message_without_nl(BoneyardCount),
+    print_message_without_nl(' '),
+    print_hide_tile,
+    print_message(' Boneyard Tiles ]').
 
 print_player_desc(Player):-
     displayable_player(Player, DisplayPlayer),
