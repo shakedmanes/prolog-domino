@@ -10,6 +10,8 @@
  * to run properly.
  */
 
+:- use_module(library(random)).
+
 :- dynamic(game_state/1).
 :- dynamic(game_board/1).
 :- dynamic(game_boneyard/1).
@@ -423,13 +425,67 @@ perform_user_play(Player, PossibleMoves, Selection):-
             ParsedTile = bone(LeftValue, RightValue)
         )
     ),
+    print_selection_performed(Player, ParsedTile, Side),
     game_board(Board),
     append_tile_on_board(Board, ParsedTile, Side, _),
     remove_tile_from_player_hand(Player, bone(LeftValue, RightValue)).
 
+print_selection_performed(Player, ParsedTile, Side):-
+    print_message(''),
+    print_message_without_nl('Player'),
+    print_player_desc(Player),
+    displayable_bone(ParsedTile, DisplayParsedTile),
+    print_message_without_nl(' put '),
+    print_message_without_nl(DisplayParsedTile),
+    print_message_without_nl(' on the '),
+    print_message_without_nl(Side),
+    print_message(' of the board'),
+    sleep(3).
 
 
-perform_comp_play.
+
+perform_computer_play(Player):-
+    player_hand(Player, PlayerHand),
+    get_appendable_tiles(PlayerHand, PossibleMoves),
+    print_message_without_nl('Player '),
+    print_player_desc(Player),
+    print_message(' is playing...'),
+    sleep(3),
+    (
+        (
+            PossibleMoves == [],
+            !,
+            show_automatic_draw_boneyard(Player)
+        )
+        ;
+        (
+            !,
+            perform_specific_computer_move(Player, PossibleMoves)
+        )
+    ).
+
+perform_specific_computer_move(Player, PossibleMoves):-
+    player_identity(Player, PlayerIdentity),
+    (
+        (
+            PlayerIdentity == computer_random,
+            !,
+            computer_random_move(Player, PossibleMoves)
+        )
+        ;
+        (
+            PlayerIdentity == computer_statistical,
+            !
+        )
+    ).
+
+
+computer_random_move(Player, PossibleMoves):-
+    list_length(PossibleMoves, Range),
+    random_between(1, Range, RandomSelection),
+    perform_user_play(Player, PossibleMoves, RandomSelection).
+
+
 
 play_player_turn:-
    curr_player_turn(CurrentPlayer),
@@ -448,7 +504,7 @@ play_player_turn:-
        ;
        (
            !,
-           perform_comp_play
+           perform_computer_play(CurrentPlayer)
        )
    ).
 
