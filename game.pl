@@ -24,6 +24,7 @@
 :- dynamic(player_hand/2).
 :- dynamic(player_hand_count/2).
 :- dynamic(player_hand_weight/2).
+:- dynamic(player_decision_matrix/2).
 
 
 /** Utilities **/
@@ -68,6 +69,112 @@ remove_element_from_list(Element, [Element | RestList1], RestList2):-
 
 % Empty list will return always empty list.
 remove_element_from_list(_, [], []).
+
+
+% Matrix dimensions
+matrix_dimensions(8, 7).
+
+% This is the most efficient way to create matrix.
+generate_decision_matrix(Matrix):-
+    Matrix = [
+	[0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0]
+    ].
+
+% Get element at specific location at the matrix
+get_element_from_decision_matrix(RowNum, ColNum, Matrix, Value):-
+    get_row_from_decision_matrix(RowNum, Matrix, SelectedRow),
+    nth0(ColNum, SelectedRow, Value).
+
+% Get specific row from matrix
+get_row_from_decision_matrix(RowNum, Matrix, RequestedRow):-
+    nth0(RowNum, Matrix, RequestedRow).
+
+% Update element in decision matrix
+update_element_in_decision_matrix(RowNum, ColNum, Matrix, NewMatrix):-
+    matrix_dimensions(RowSize, _),
+    ActualLastRowIndex is RowSize - 1,
+    (
+	(
+		% Means this is a double bone tile
+		RowNum == ColNum,
+            !,
+
+            % Get the selected row, and the summary row from the matrix
+            get_row_from_decision_matrix(RowNum, Matrix, SelectedRow),
+            get_row_from_decision_matrix(ActualLastRowIndex, Matrix, SummaryRow),
+
+            % Update the value in the selected double tile (increase one)
+            operation_on_element_in_list(ColNum, 1, add, SelectedRow, UpdatedRow),
+
+		% Replace the updated row in the matrix
+            operation_on_element_in_list(RowNum, UpdatedRow, replace, Matrix, UpdatedMatrix),
+
+		% Update the summary row
+		operation_on_element_in_list(RowNum, 1, add, SummaryRow, UpdatedSummaryRow),
+
+		% Replace the summary row in the matrix
+		operation_on_element_in_list(ActualLastRowIndex, UpdatedSummaryRow, replace, UpdatedMatrix, NewMatrix)
+        )
+	;
+	(
+		% Get the corresponding bone tiles rows (Reversed and regular bone).
+		!,
+		get_row_from_decision_matrix(RowNum, Matrix, SelectedRow),
+            get_row_from_decision_matrix(ColNum, Matrix, SelectedCol),
+
+		% Get the summary row.
+		get_row_from_decision_matrix(ActualLastRowIndex, Matrix, SummaryRow),
+
+		% Update selected row and col.
+		operation_on_element_in_list(ColNum, 1, add, SelectedRow, UpdatedRow),
+            operation_on_element_in_list(RowNum, 1, add, SelectedCol, UpdatedCol),
+
+		% Update summary row with values appended in selected row and col.
+		operation_on_element_in_list(RowNum, 1, add, SummaryRow, UpdatedSummaryRow1),
+            operation_on_element_in_list(ColNum, 1, add, UpdatedSummaryRow1, UpdatedSummaryRow2),
+
+		% Update matrix with updated row, updated col, updated summary row.
+		operation_on_element_in_list(RowNum, UpdatedRow, replace, Matrix, UpdatedMatrix1),
+            operation_on_element_in_list(ColNum, UpdatedCol, replace, UpdatedMatrix1, UpdatedMatrix2),
+            operation_on_element_in_list(ActualLastRowIndex, UpdatedSummaryRow2, replace, UpdatedMatrix2, NewMatrix)
+        )
+    ).
+
+
+operation_on_element_in_list(Index, Value, Operation, List, NewList):-
+    set_element_in_list(Index, 0, Value, Operation, List, NewList).
+
+
+set_element_in_list(_, _, _, _, [], []):- !.
+
+set_element_in_list(Index, OtherIndex, Value, Operation, [Element | List], [Element | NewList]):-
+    OtherIndex \== Index,
+    !,
+    NextIndex is OtherIndex + 1,
+    set_element_in_list(Index, NextIndex, Value, Operation, List, NewList).
+
+set_element_in_list(Index, Index, Value, Operation, [Element | List], [OtherElement | NewList]):-
+    (
+	(
+		Operation == replace,
+            !,
+		OtherElement = Value
+        )
+	;
+	(
+		OtherElement is Element + Value,
+            !
+        )
+    ),
+    NextIndex is Index + 1,
+    set_element_in_list(Index, NextIndex, Value, Operation, List, NewList).
 
 
 member_diff_list(Element, List-RestList):-
@@ -304,6 +411,8 @@ run_menu_selection(Selection):-
 start_new_game:-
     cleanup_game_states,
     set_game_state(in_game),
+    prepare_player(player_one),
+    prepare_player(player_two),
     print_message('Starting new game...'),
     sleep(2),
     print_message('Shuffling bone tiles...'),
@@ -344,6 +453,38 @@ start_game_loop:-
     cut_wrapper(update_game_state),
     cut_wrapper(continue_game_loop).
 
+prepare_player(Player):-
+    player_identity(Player, Identity),
+    (
+        (
+            Identity == computer_statistical,
+            generate_decision_matrix_for_player(Player)
+        )
+        ;
+        (
+            true
+        )
+    ).
+
+generate_decision_matrix_for_player(Player):-
+    generate_decision_matrix(Matrix),
+    set_player_decision_matrix(Player, Matrix).
+
+update_player_decision_matrix(Player, bone(LeftSide, RightSide)):-
+    player_identity(Player, Identity),
+    (
+        (
+            Identity == computer_statistical,
+            player_decision_matrix(Player, Matrix),
+            update_element_in_decision_matrix(LeftSide, RightSide, Matrix, UpdatedMatrix),
+            set_player_decision_matrix(Player, UpdatedMatrix)
+        )
+        ;
+        (
+            true
+        )
+    ).
+
 ask_user_play(Player):-
     player_hand(Player, PlayerHand),
     get_appendable_tiles(PlayerHand, PossibleMoves),
@@ -361,7 +502,9 @@ ask_user_play(Player):-
             print_message('Please select one of the following options to play: '),
             show_possible_moves_selection(PossibleMoves, 1-Range),
             get_user_selection(1-Range, Selection),
-            perform_user_play(Player, PossibleMoves, Selection)
+            nth1(Selection, PossibleMoves, Move),
+            perform_user_play(Player, Move)
+            %perform_user_play(Player, PossibleMoves, Selection)
         )
     ).
 
@@ -407,12 +550,13 @@ show_automatic_draw_boneyard(Player):-
     add_tile_to_player_hand(Player, Tile).
 
 
-perform_user_play(Player, PossibleMoves, Selection):-
-    nth1(
+%perform_user_play(Player, PossibleMoves, Selection):-
+perform_user_play(Player, possible_move(bone(LeftValue, RightValue), Side, Reversed)):-
+    /*nth1(
         Selection,
         PossibleMoves,
         possible_move(bone(LeftValue, RightValue), Side, Reversed)
-    ),
+    ),*/
     (
         (
             Reversed == yes,
@@ -428,7 +572,9 @@ perform_user_play(Player, PossibleMoves, Selection):-
     print_selection_performed(Player, ParsedTile, Side),
     game_board(Board),
     append_tile_on_board(Board, ParsedTile, Side, _),
-    remove_tile_from_player_hand(Player, bone(LeftValue, RightValue)).
+    remove_tile_from_player_hand(Player, bone(LeftValue, RightValue)),
+    update_player_decision_matrix(player_one, ParsedTile),
+    update_player_decision_matrix(player_two, ParsedTile).
 
 print_selection_performed(Player, ParsedTile, Side):-
     print_message(''),
@@ -475,17 +621,177 @@ perform_specific_computer_move(Player, PossibleMoves):-
         ;
         (
             PlayerIdentity == computer_statistical,
-            !
+            !,
+            computer_statistical_move(Player, PossibleMoves)
         )
     ).
+
+computer_statistical_move(Player, PossibleMoves):-
+    matrix_dimensions(RowSize, _),
+    ActualRowIndex is RowSize - 1,
+    player_decision_matrix(Player, DecisionMatrix),
+    get_row_from_decision_matrix(ActualRowIndex, DecisionMatrix, ProbabilityRow),
+    get_best_move(ProbabilityRow, PossibleMoves, BestMove),
+    perform_user_play(Player, BestMove).
 
 
 computer_random_move(Player, PossibleMoves):-
     list_length(PossibleMoves, Range),
     random_between(1, Range, RandomSelection),
-    perform_user_play(Player, PossibleMoves, RandomSelection).
+    nth1(RandomSelection, PossibleMoves, Move),
+    %perform_user_play(Player, PossibleMoves, RandomSelection).
+    perform_user_play(Player, Move).
+
+get_best_move(ProbabilityRow, PossibleMoves, BestMove):-
+    probability_parser(ProbabilityRow, ParsedProbabilityRow),
+    merge_sort(weight_estimator, PossibleMoves, SortedPossibleMoves),
+    merge_sort(probability_estimator, ParsedProbabilityRow, SortedProbabilityRow),
+    find_best_probability_move(SortedProbabilityRow, SortedPossibleMoves, BestMove).
 
 
+
+find_best_probability_move(ProbRow, PosMoves, Move):-
+    !,
+    findall(
+        possible_move(bone(Left, Right), Side, Reversed),
+	(
+            member((_, Index), ProbRow),
+            member(possible_move(bone(Left, Right), Side, Reversed), PosMoves),
+            (
+		(
+		    Left == Index,
+                    (
+			Side == left
+			;
+			Reversed == yes
+                    )
+                )
+		;
+		(
+                    Right == Index,
+                    (
+			Side == right
+			;
+			Reversed == yes
+                    )
+                )
+            ),
+            !
+        ),
+	List
+    ),
+    !,
+    nth0(0, List, Move),
+    !.
+
+probability_parser(ProbabilityRow, ParsedProbabilityRow):-
+    probability_parser(ProbabilityRow, 0, ParsedProbabilityRow).
+
+probability_parser([Value], Index, [(Value, Index)]):- !.
+probability_parser(
+    [ProbabilityValue | RestRow],
+    Index,
+    [(ProbabilityValue, Index) | RestParsedRow]
+):-
+    !,
+    NextIndex is Index + 1,
+    probability_parser(RestRow, NextIndex, RestParsedRow).
+
+
+
+weight_estimator(
+    possible_move(bone(FirstLeft, FirstRight), _, FirstReversed),
+    possible_move(bone(SecondLeft, SecondRight), _, SecondReversed),
+    MaxPossibleMove
+):-
+    FirstSum is FirstLeft + FirstRight,
+    SecondSum is SecondLeft + SecondRight,
+    (
+	(
+            FirstSum >= SecondSum,
+            MaxPossibleMove = possible_move(bone(FirstLeft, FirstRight), _, FirstReversed)
+	)
+        ;
+	(
+            SecondSum > FirstSum,
+            MaxPossibleMove = possible_move(bone(SecondLeft, SecondRight), _, SecondReversed)
+	)
+    ).
+
+probability_estimator(
+    (FirstValue, FirstIndex),
+    (SecondValue, SecondIndex),
+    (MaxValue, MaxIndex)
+):-
+    (
+	(
+            FirstValue >= SecondValue,
+            MaxValue = FirstValue,
+            MaxIndex = FirstIndex
+        )
+	;
+	(
+            MaxValue = SecondValue,
+            MaxIndex = SecondIndex
+        )
+    ).
+
+
+merge_sort_util_merge(_, List, List, []).
+merge_sort_util_merge(_, List, [], List).
+
+merge_sort_util_merge(
+    Estimator,
+    [MinList1 | RestMerged],
+    [MinList1 | RestList1],
+    [MinList2 | RestList2]
+):-
+    call(Estimator, MinList1, MinList2, MinList1),
+    !,
+    merge_sort_util_merge(
+        Estimator,
+        RestMerged,
+        RestList1,
+        [MinList2 | RestList2]
+    ),
+    !.
+
+merge_sort_util_merge(
+    Estimator,
+    [MinList2 | RestMerged],
+    [MinList1 | RestList1],
+    [MinList2|RestList2]
+):-
+    call(Estimator, MinList2, MinList1, MinList2),
+    !,
+    merge_sort_util_merge(
+        Estimator,
+        RestMerged,
+        [MinList1 | RestList1],
+        RestList2
+    ),
+    !.
+
+merge_sort(_, [], []).
+merge_sort(_, [Element], [Element | []]).
+
+merge_sort(Estimator, List, Sorted) :-
+    !,
+    length(List, N),
+    !,
+    FirstLength is N // 2,
+    SecondLength is N - FirstLength,
+    length(FirstUnsorted, FirstLength),
+    !,
+    length(SecondUnsorted, SecondLength),
+    !,
+    append(FirstUnsorted, SecondUnsorted, List),
+    !,
+    merge_sort(Estimator, FirstUnsorted, FirstSorted),
+    !,
+    merge_sort(Estimator, SecondUnsorted, SecondSorted),
+    !,
+    merge_sort_util_merge(Estimator, Sorted, FirstSorted, SecondSorted).
 
 play_player_turn:-
    curr_player_turn(CurrentPlayer),
@@ -791,6 +1097,11 @@ set_current_turn(PlayerID):-
 set_player_identity(Player, PlayerType):-
     retractall(player_identity(Player, _)),
     assert(player_identity(Player, PlayerType)).
+
+% Sets the player's decision matrix
+set_player_decision_matrix(Player, Matrix):-
+    retractall(player_decision_matrix(Player, _)),
+    assert(player_decision_matrix(Player, Matrix)).
 
 % Sets the game boneyard for a given boneyard.
 set_game_boneyard(Boneyard):-
@@ -1117,7 +1428,8 @@ cleanup_game_states:-
     retractall(player_hand(_, _)),
     retractall(curr_player_turn(_)),
     retractall(last_tile_right(_)),
-    retractall(last_tile_left(_)).
+    retractall(last_tile_left(_)),
+    retractall(player_decision_matrix(_, _)).
 
 
 get_user_selection(StartRange-EndRange, Selection):-
