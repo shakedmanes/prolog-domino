@@ -1,7 +1,7 @@
 /*
  * Author: Shaked Manes
  * Purpose: Game Project for MAMAN 17
- * Date: XX/10/2020
+ * Date: 31/10/2020
  * Module: game.config.pl
  * Description: Configurations module which used in the game project.
  *
@@ -185,4 +185,5 @@ displayable_player(player_two, 'Player 2').
 /** Displaying players types **/
 displayable_player_type(user_player, 'You').
 displayable_player_type(computer_random, 'Computer Random Bot').
+displayable_player_type(computer_greedy, 'Computer Greedy Bot').
 displayable_player_type(computer_statistical, 'Computer Statistical Bot').

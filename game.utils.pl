@@ -1,7 +1,7 @@
 /*
  * Author: Shaked Manes
  * Purpose: Game Project for MAMAN 17
- * Date: XX/10/2020
+ * Date: 31/10/2020
  * Module: game.utils.pl
  * Description: Utilities module which used in the game project.
  *
@@ -26,6 +26,7 @@
            set_element_in_list/6,
            member_diff_list/2,
            list_length/2,
+           max_in_list/3,
            merge_sort/3
        ]
    ).
@@ -345,6 +346,32 @@ list_length([], 0).
 list_length([_ | Rest], Length):-
     list_length(Rest, RestLength),
     Length is RestLength + 1.
+
+/**
+ * max_in_list(Estimator, List, Max):-
+ *   Finds the maximum element in given List, by given estimator.
+ *   The predicates checks the 'greather-than' condition by the given
+ *   estimator to find the maximum element in the list.
+ *
+ *   INPUT:
+ *     Estimator - The estimator to run when checking 'greather-than'
+ *                 condition.
+ *     List - The list which the predicate search for maximum element.
+ *
+ *   OUTPUT:
+ *     Max - The maximum element which found in the list.
+ */
+% List with only one element - that element is the max
+max_in_list(_, [Max],Max):- !.
+
+% Get the maximum in the rest of the list, and the first element.
+% Compare them using the estimator given, which will return in Max
+% the greather value between them.
+max_in_list(Estimator, [Element | RestElements], Max):-
+    max_in_list(Estimator, RestElements, RestMax),
+    call(Estimator, Element, RestMax, Max),
+    !.
+
 
 /**
  * merge_sort_util_merge(
